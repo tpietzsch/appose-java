@@ -132,12 +132,12 @@ public class SharedMemoryArrayMacOS implements SharedMemoryArray {
 
 
 
-	private SharedMemoryArrayMacOS(int size) throws FileAlreadyExistsException
+	public SharedMemoryArrayMacOS(int size) throws FileAlreadyExistsException
 	{
 		this(createShmName(), size);
 	}
 
-	private SharedMemoryArrayMacOS(String name, int size) throws FileAlreadyExistsException
+	public SharedMemoryArrayMacOS(String name, int size) throws FileAlreadyExistsException
 	{
 		this.size = size;
 		this.memoryName = name;

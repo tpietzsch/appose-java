@@ -44,6 +44,7 @@ public class Shm {
 
 	private static final boolean prepend_leading_slash = os.isPosix();
 
+	private int O_RDONLY = 0;
 	private static final int O_RDWR = 2;
 	private static final int O_CREAT = 512;
 	private static final int O_EXCL = 2048;
@@ -139,10 +140,11 @@ public class Shm {
 		final int mode = 0600;
 
 		if ( os == OSX ) {
+			final LibC instance = LibC.INSTANCE;
 			if (name == null) {
 				while (true) {
 					name = make_filename();
-					fd = LibC.INSTANCE.shm_open(
+                    fd = instance.shm_open(
 							name,
 							flags,
 							mode
@@ -161,7 +163,7 @@ public class Shm {
 				if (prepend_leading_slash) {
 					name = "/" + name;
 				}
-				fd = LibC.INSTANCE.shm_open(
+                fd = instance.shm_open(
 						name,
 						flags,
 						mode
@@ -174,14 +176,16 @@ public class Shm {
 				}
 			}
 
+//			long size_before = sizeFromFileDescriptor(fd);
+//			System.out.println("size before = " + size_before);
 			if (create) {
-				LibC.INSTANCE.ftruncate(fd, (int) size);
+                instance.ftruncate(fd, (int) size);
 			}
 			size = sizeFromFileDescriptor(fd);
+//			System.out.println("size = " + size);
 			this.size = (int) size;
-			mmap = LibC.INSTANCE.mmap(Pointer.NULL, (int) size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+			mmap = instance.mmap(Pointer.NULL, (int) size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 			// TODO failures in ftruncate, fstat, and mmap should be caught, then unlink and throw some exception
-
 
 
 
@@ -262,5 +266,15 @@ public class Shm {
 		} else {
 			throw new UnsupportedOperationException("only macos implemented so far ...");
 		}
+	}
+
+	@Override
+	public String toString() {
+		return "Shm{" +
+				"name='" + name + '\'' +
+				", size=" + size +
+				", fd=" + fd +
+				", mmap=" + mmap +
+				'}';
 	}
 }

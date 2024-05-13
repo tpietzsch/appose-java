@@ -4,6 +4,7 @@ import groovy.json.JsonGenerator;
 import groovy.json.JsonSlurper;
 import org.apposed.appose.shm.SharedMemoryArray;
 import org.apposed.appose.shm.Shm;
+import org.apposed.appose.shm.ShmInterface;
 import org.apposed.appose.shm.ndarray.DType;
 import org.apposed.appose.shm.ndarray.NDArray;
 import org.apposed.appose.shm.ndarray.Shape;
@@ -19,7 +20,9 @@ import static org.apposed.appose.shm.ndarray.Shape.Order.C_ORDER;
 class JsonUtils {
 
 	static String toJson(Object obj) {
-		return GENERATOR.toJson(obj);
+		final String json = GENERATOR.toJson(obj);
+		fromJson(json);
+		return json;
 	}
 
 	private static <T> JsonGenerator.Converter convert(final Class<T> clz, final String appose_type, final BiConsumer<Map<String, Object>, T> converter) {
@@ -45,7 +48,7 @@ class JsonUtils {
 		.addConverter(convert(SharedMemoryArray.class, "shm", (map, shm) -> {
 			map.put("name", shm.name());
 			map.put("size", shm.size());
-		})).addConverter(convert(Shm.class, "shm", (map, shm) -> {
+		})).addConverter(convert(ShmInterface.class, "shm", (map, shm) -> {
 			map.put("name", shm.name());
 			map.put("size", shm.size());
 		})).addConverter(convert(NDArray.class, "ndarray", (map, ndArray) -> {
@@ -91,9 +94,9 @@ class JsonUtils {
 				case "shm":
 					final String name = (String) map.get("name");
 					final int size = (int) map.get("size");
-					return new Shm(name, false, size);
+					return new ShmInterface(name, false, size);
 				case "ndarray":
-					final Shm shm = (Shm) map.get("shm");
+					final ShmInterface shm = (ShmInterface) map.get("shm");
 					final DType dType = DType.fromJson((String) map.get("dtype"));
 					final Shape shape = new Shape(C_ORDER, ((List<Integer>) map.get("shape")).stream().mapToInt(Integer::intValue).toArray());
 					return new NDArray(shm, dType, shape);

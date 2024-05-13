@@ -4,14 +4,15 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import org.apposed.appose.shm.Shm;
+import org.apposed.appose.shm.ShmInterface;
 
 public class NDArray implements Closeable {
 
-	private final Shm sharedMemory;
+	private final ShmInterface sharedMemory;
 	private final DType dType;
 	private final Shape shape;
 
-	public NDArray(final Shm sharedMemory, final DType dType, final Shape shape) {
+	public NDArray(final ShmInterface sharedMemory, final DType dType, final Shape shape) {
 		this.sharedMemory = sharedMemory;
 		this.dType = dType;
 		this.shape = shape;
@@ -19,7 +20,7 @@ public class NDArray implements Closeable {
 
 	public NDArray(final DType dType, final Shape shape) {
 		this(
-			new Shm(null,true,safeInt(shape.numElements() * dType.bytesPerElement())),
+			new ShmInterface(null,true,safeInt(shape.numElements() * dType.bytesPerElement())),
 			dType, shape);
 	}
 
@@ -31,13 +32,13 @@ public class NDArray implements Closeable {
 		return shape;
 	}
 
-	public Shm shm() {
+	public ShmInterface shm() {
 		return sharedMemory;
 	}
 
 	public ByteBuffer buffer() {
 		final long length = shape.numElements() * dType.bytesPerElement();
-		return sharedMemory.getPointer().getByteBuffer(0, length);
+		return sharedMemory.pointer().getByteBuffer(0, length);
 	}
 
 	@Override
