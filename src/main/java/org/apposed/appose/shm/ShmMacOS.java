@@ -22,86 +22,74 @@ package org.apposed.appose.shm;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
-import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.util.UUID;
 
-public class SharedMemoryArrayMacOS implements SharedMemoryArray {
+import java.nio.file.FileAlreadyExistsException;
+
+import static org.apposed.appose.shm.ShmUtils.MAP_SHARED;
+import static org.apposed.appose.shm.ShmUtils.O_RDONLY;
+import static org.apposed.appose.shm.ShmUtils.PROT_READ;
+import static org.apposed.appose.shm.ShmUtils.PROT_WRITE;
+import static org.apposed.appose.shm.ShmUtils.withLeadingSlash;
+import static org.apposed.appose.shm.ShmUtils.withoutLeadingSlash;
+
+/**
+ * TODO separate unlink and close
+ *
+ * @author Carlos Garcia Lopez de Haro
+ * @author Tobias Pietzsch
+ */
+class ShmMacOS implements SharedMemory.Impl {
 
 	/**
 	 * Instance of the CLibrary JNI containing the methods to interact with the Shared memory segments
 	 */
+	// TODO: Try inlining
 	private static final CLibrary INSTANCE = CLibrary.INSTANCE;
 
 	/**
 	 * Instance of the  JNI containing the methods that help ineracting with shared memory segments
 	 * and are not contained in the {@link CLibrary}.
 	 */
+	// TODO: Try inlining
 	private static final MacosHelpers MACOS_INSTANCE = MacosHelpers.INSTANCE;
 
 	/**
-	 * Maximum length of the name that can be given to a shared memory region
+	 * File descriptor
 	 */
-	private static final int MACOS_MAX_LENGTH = 30;
-
-
+	private final int fd;
 
 	/**
-	 * Pointer referencing the shared memory byte array
-	 */
-	private final Pointer pSharedMemory;
-
-	/**
-	 * File descriptor value of the shared memory segment
-	 */
-	private final int shmFd;
-
-	/**
-	 * Name of the file containing the shared memory segment. In Unix based systems consits of "/" + file_name.
-	 * In Linux the shared memory segments can be inspected at /dev/shm.
-	 * For MacOS the name can only have a certain length, {@value #MACOS_MAX_LENGTH}
-	 */
-	private final String memoryName;
-
-	/**
-	 * Size of the shared memory block
+	 * Size in bytes
 	 */
 	private final int size;
+
+	/**
+	 * Pointer referencing the shared memory
+	 */
+	private final Pointer pointer;
+
+	/**
+	 * Unique name that identifies the shared memory segment.
+	 */
+	private final String name;
 
 	/**
 	 * Whether the memory block has been closed and unlinked
 	 */
 	private boolean unlinked = false;
 
-
-
-	@Override
-	public String getName() {
-		return memoryName;
-	}
-
-	@Override
-	public String getNameForPython() {
-		return memoryName.substring("/".length());
-	}
-
 	@Override
 	public String name() {
-		return getNameForPython(); // TODO fix name generation and reporting
+		return name;
 	}
 
 	@Override
-	public Pointer getPointer() {
-		return pSharedMemory;
+	public Pointer pointer() {
+		return pointer;
 	}
 
 	@Override
-	public int getSize() {
-		return size;
-	}
-
-	@Override
-	public long size() {
+	public int size() {
 		return size;
 	}
 
@@ -109,91 +97,89 @@ public class SharedMemoryArrayMacOS implements SharedMemoryArray {
 	 * Unmap and close the shared memory. Necessary to eliminate the shared memory block
 	 */
 	@Override
-	public void close() throws IOException {
-		if (this.unlinked) {
+	public synchronized void close() {
+		if (unlinked) {
 			return;
 		}
 
 		// Unmap the shared memory
-		if (this.pSharedMemory != Pointer.NULL && INSTANCE.munmap(this.pSharedMemory, size) == -1) {
+		if (this.pointer != Pointer.NULL && INSTANCE.munmap(this.pointer, size) == -1) {
 			throw new RuntimeException("munmap failed. Errno: " + Native.getLastError());
 		}
 
 		// Close the file descriptor
-		if (INSTANCE.close(this.shmFd) == -1) {
+		if (INSTANCE.close(this.fd) == -1) {
 			throw new RuntimeException("close failed. Errno: " + Native.getLastError());
 		}
 
 		// Unlink the shared memory object
-		INSTANCE.shm_unlink(this.memoryName);
+		INSTANCE.shm_unlink(this.name);
 		unlinked = true;
-
 	}
 
-
-
-	public SharedMemoryArrayMacOS(int size) throws FileAlreadyExistsException
-	{
-		this(createShmName(), size);
-	}
-
-	public SharedMemoryArrayMacOS(String name, int size) throws FileAlreadyExistsException
-	{
-		this.size = size;
-		this.memoryName = name;
-
-		boolean alreadyExists = false;
-		int shmFd = INSTANCE.shm_open(memoryName, O_RDONLY, 0700);
-		long prevSize = 0;
-		if (shmFd != -1) {
-			prevSize = getSHMSize(shmFd);
-			alreadyExists = true;
+	// name without leading slash
+	ShmMacOS(final String name, final boolean create, final int size) {
+		String shm_name;
+		long prevSize;
+		if (name == null) {
+			do {
+				shm_name = ShmUtils.make_filename(SHM_SAFE_NAME_LENGTH, SHM_NAME_PREFIX);
+				prevSize = getSHMSize(shm_name);
+			} while (prevSize >= 0);
+		} else {
+			shm_name = withLeadingSlash(name);
+			prevSize = getSHMSize(shm_name);
 		}
 
+		final boolean alreadyExists = prevSize >= 0;
 		if (alreadyExists && prevSize < size) {
-			throw new FileAlreadyExistsException("Shared memory segment already exists with smaller dimensions, data type or format. "
+			throw new RuntimeException("Shared memory segment already exists with smaller dimensions, data type or format. "
 				+ "Size of the existing shared memory segment cannot be smaller than the size of the proposed object. "
 				+ "Size of existing shared memory segment: " + prevSize + ", size of proposed object: " + size);
 		}
 		//		shmFd = INSTANCE.shm_open(this.memoryName, O_RDWR, 0666);
-		shmFd = MACOS_INSTANCE.create_shared_memory(memoryName, size);
+		final int shmFd = MACOS_INSTANCE.create_shared_memory(shm_name, size);
 		if (shmFd < 0) {
 			throw new RuntimeException("shm_open failed, errno: " + Native.getLastError());
 		}
+		final int shm_size = (int) getSHMSize(shm_name);
 
-		pSharedMemory = INSTANCE.mmap(Pointer.NULL, this.size, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0);
-		if (pSharedMemory == Pointer.NULL) {
+		Pointer pointer = INSTANCE.mmap(Pointer.NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0);
+		if (pointer == Pointer.NULL) {
 			INSTANCE.close(shmFd);
+			INSTANCE.shm_unlink(shm_name);
 			throw new RuntimeException("mmap failed, errno: " + Native.getLastError());
 		}
 
-		this.shmFd = shmFd;
-	}
-
-
-
-
-
-
-
-
-
-
-
-	static SharedMemoryArrayMacOS create(int size) {
-		try {
-			return new SharedMemoryArrayMacOS(size);
-		} catch (FileAlreadyExistsException e) {
-			throw new RuntimeException("Unexpected error.", e);
-		}
+		this.size = shm_size;
+		this.name = withoutLeadingSlash(shm_name);
+		this.fd = shmFd;
+		this.pointer = pointer;
 	}
 
 	/**
-	 * Create a random unique name for a shared memory segment
-	 * @return a random unique name for a shared memory segment
+	 * FreeBSD (and perhaps other BSDs) limit names to 14 characters.
 	 */
-	private static String createShmName() {
-		return ("/shm-" + UUID.randomUUID()).substring(0, SharedMemoryArrayMacOS.MACOS_MAX_LENGTH);
+	private static final int SHM_SAFE_NAME_LENGTH = 14;
+
+	/**
+	 * Shared memory block name prefix.
+	 */
+	private static final String SHM_NAME_PREFIX = "/psm_";
+
+	/**
+	 * Try to open {@code name} and get its size in bytes.
+	 *
+	 * @param name name with leading slash
+	 * @return size in bytes, or -1 if the shared memory segment couuld not be opened
+	 */
+	private static long getSHMSize(final String name) {
+		final int shmFd = INSTANCE.shm_open(name, O_RDONLY, 0700);
+		if (shmFd < 0) {
+			return -1;
+		} else {
+			return getSHMSize(shmFd);
+		}
 	}
 
 	/**
@@ -216,6 +202,4 @@ public class SharedMemoryArrayMacOS implements SharedMemoryArray {
 		}
 		return size;
 	}
-
-
 }

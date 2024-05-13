@@ -1,12 +1,10 @@
 package org.apposed.appose;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.nio.FloatBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apposed.appose.shm.Shm;
 import org.apposed.appose.shm.ndarray.DType;
 import org.apposed.appose.shm.ndarray.NDArray;
 import org.apposed.appose.shm.ndarray.Shape;
@@ -29,13 +27,10 @@ public class PlaygroundNDArrayGroovy {
 			buf.put(i, i);
 		}
 
-//		System.out.println("ndArray.shm().size() = " + ndArray.shm().size());
-//		System.out.println("ndArray.shm().name() = " + ndArray.shm().name());
+		System.out.println("ndArray.shm().size() = " + ndArray.shm().size());
+		System.out.println("ndArray.shm().name() = " + ndArray.shm().name());
 		float v = ndArray.buffer().asFloatBuffer().get(5);
 		System.out.println("v = " + v);
-
-//		Shm shm2 = new Shm(ndArray.shm().name(), false, ndArray.shm().size());
-//		System.out.println("shm2 = " + shm2.name());
 
 		// pass to groovy
 		Environment env = Appose.system();
@@ -50,6 +45,6 @@ public class PlaygroundNDArrayGroovy {
 	}
 
 	private static final String PRINT_INPUT = "" + //
-			"return img.buffer().asFloatBuffer().get(5) + \"-\";\n";
+			"return  \"[\" + img.buffer().asFloatBuffer().get(5) + \"]\";\n";
 
 }

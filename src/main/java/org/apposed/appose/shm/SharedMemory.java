@@ -1,17 +1,33 @@
 package org.apposed.appose.shm;
 
 import com.sun.jna.Pointer;
-import org.apposed.appose.SharedMemory;
 
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 
-public class ShmInterface {
+public final class SharedMemory {
 
-    private final SharedMemoryArrayMacOS impl;
+    private final Impl impl;
 
-    public ShmInterface(String name, boolean create, long size) throws FileAlreadyExistsException {
-        impl = create ? new SharedMemoryArrayMacOS((int) size) : new SharedMemoryArrayMacOS("/" + name, (int) size);
+    public SharedMemory(String name, boolean create, int size) {
+        if (size < 0) {
+            throw new IllegalArgumentException("'size' must be a positive integer");
+        }
+        if (create && size == 0) {
+            throw new IllegalArgumentException("'size' must be a positive number different from zero");
+        }
+        if (!create && name == null) {
+            throw new IllegalArgumentException("'name' can only be null if create=true");
+        }
+        switch (ShmUtils.os) {
+            case OSX:
+                impl = new ShmMacOS(name, create, size);
+                break;
+            case WINDOWS:
+            case LINUX:
+            default:
+                throw new UnsupportedOperationException("not implemented for " + ShmUtils.os);
+        }
     }
 
     /**
@@ -38,7 +54,7 @@ public class ShmInterface {
      * @return the pointer to the shared memory segment
      */
     public Pointer pointer() {
-        return impl.getPointer();
+        return impl.pointer();
     }
 
     /**
@@ -71,4 +87,16 @@ public class ShmInterface {
                 '}';
     }
 
+    interface Impl {
+        String name();
+
+        int size();
+
+        Pointer pointer();
+
+        void close() throws IOException;
+    }
+
+
 }
+

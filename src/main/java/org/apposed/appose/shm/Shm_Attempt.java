@@ -4,9 +4,9 @@ import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.platform.linux.ErrNo;
 
-import static org.apposed.appose.shm.Shm.OS.OSX;
+import static org.apposed.appose.shm.Shm_Attempt.OS.OSX;
 
-public class Shm {
+public class Shm_Attempt {
 
 	enum OS {
 		WINDOWS(false), //
@@ -124,7 +124,7 @@ public class Shm {
 
 
 
-	public Shm(String name, boolean create, long size) {
+	public Shm_Attempt(String name, boolean create, long size) {
 
 		if (size < 0) {
 			throw new IllegalArgumentException("'size' must be a positive integer");

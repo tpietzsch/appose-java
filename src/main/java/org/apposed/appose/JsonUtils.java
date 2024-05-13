@@ -2,9 +2,7 @@ package org.apposed.appose;
 
 import groovy.json.JsonGenerator;
 import groovy.json.JsonSlurper;
-import org.apposed.appose.shm.SharedMemoryArray;
-import org.apposed.appose.shm.Shm;
-import org.apposed.appose.shm.ShmInterface;
+import org.apposed.appose.shm.SharedMemory;
 import org.apposed.appose.shm.ndarray.DType;
 import org.apposed.appose.shm.ndarray.NDArray;
 import org.apposed.appose.shm.ndarray.Shape;
@@ -45,10 +43,7 @@ class JsonUtils {
 	}
 
 	static final JsonGenerator GENERATOR = new JsonGenerator.Options() //
-		.addConverter(convert(SharedMemoryArray.class, "shm", (map, shm) -> {
-			map.put("name", shm.name());
-			map.put("size", shm.size());
-		})).addConverter(convert(ShmInterface.class, "shm", (map, shm) -> {
+		.addConverter(convert(SharedMemory.class, "shm", (map, shm) -> {
 			map.put("name", shm.name());
 			map.put("size", shm.size());
 		})).addConverter(convert(NDArray.class, "ndarray", (map, ndArray) -> {
@@ -94,9 +89,9 @@ class JsonUtils {
 				case "shm":
 					final String name = (String) map.get("name");
 					final int size = (int) map.get("size");
-					return new ShmInterface(name, false, size);
+					return new SharedMemory(name, false, size);
 				case "ndarray":
-					final ShmInterface shm = (ShmInterface) map.get("shm");
+					final SharedMemory shm = (SharedMemory) map.get("shm");
 					final DType dType = DType.fromJson((String) map.get("dtype"));
 					final Shape shape = new Shape(C_ORDER, ((List<Integer>) map.get("shape")).stream().mapToInt(Integer::intValue).toArray());
 					return new NDArray(shm, dType, shape);
