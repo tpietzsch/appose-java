@@ -27,6 +27,8 @@ import static org.apposed.appose.shm.ShmUtils.MAP_SHARED;
 import static org.apposed.appose.shm.ShmUtils.O_RDONLY;
 import static org.apposed.appose.shm.ShmUtils.PROT_READ;
 import static org.apposed.appose.shm.ShmUtils.PROT_WRITE;
+import static org.apposed.appose.shm.ShmUtils.SHM_NAME_PREFIX_POSIX;
+import static org.apposed.appose.shm.ShmUtils.SHM_SAFE_NAME_LENGTH;
 import static org.apposed.appose.shm.ShmUtils.withLeadingSlash;
 import static org.apposed.appose.shm.ShmUtils.withoutLeadingSlash;
 
@@ -108,7 +110,7 @@ class ShmMacOS implements SharedMemory.Impl {
 		long prevSize;
 		if (name == null) {
 			do {
-				shm_name = ShmUtils.make_filename(SHM_SAFE_NAME_LENGTH, SHM_NAME_PREFIX);
+				shm_name = ShmUtils.make_filename(SHM_SAFE_NAME_LENGTH, SHM_NAME_PREFIX_POSIX);
 				prevSize = getSHMSize(shm_name);
 			} while (prevSize >= 0);
 		} else {
@@ -141,16 +143,6 @@ class ShmMacOS implements SharedMemory.Impl {
 		this.fd = shmFd;
 		this.pointer = pointer;
 	}
-
-	/**
-	 * FreeBSD (and perhaps other BSDs) limit names to 14 characters.
-	 */
-	private static final int SHM_SAFE_NAME_LENGTH = 14;
-
-	/**
-	 * Shared memory block name prefix.
-	 */
-	private static final String SHM_NAME_PREFIX = "/psm_";
 
 	/**
 	 * Try to open {@code name} and get its size in bytes.

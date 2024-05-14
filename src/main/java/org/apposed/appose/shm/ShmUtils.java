@@ -73,6 +73,17 @@ class ShmUtils {
         return name.startsWith("/") ? name.substring(1) : name;
     }
 
+
+    /**
+     * FreeBSD (and perhaps other BSDs) limit names to 14 characters.
+     */
+    static final int SHM_SAFE_NAME_LENGTH = 14;
+
+    /**
+     * Shared memory block name prefix.
+     */
+    static final String SHM_NAME_PREFIX_POSIX = "/psm_";
+
     /**
      * Creates a random filename for the shared memory object.
      *
