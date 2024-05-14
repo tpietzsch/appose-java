@@ -28,7 +28,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
-public interface MacosHelpers extends Library {
+interface MacosHelpers extends Library {
 
 	String LIBRARY_NAME = "ShmCreate";
 

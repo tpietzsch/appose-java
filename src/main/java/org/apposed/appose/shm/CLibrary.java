@@ -23,7 +23,7 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
-public interface CLibrary extends Library {
+interface CLibrary extends Library {
     CLibrary INSTANCE = Native.load("c", CLibrary.class);
 
     int shm_open(String name, int oflag, int mode);

@@ -23,8 +23,6 @@ package org.apposed.appose.shm;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
-import java.nio.file.FileAlreadyExistsException;
-
 import static org.apposed.appose.shm.ShmUtils.MAP_SHARED;
 import static org.apposed.appose.shm.ShmUtils.O_RDONLY;
 import static org.apposed.appose.shm.ShmUtils.PROT_READ;
@@ -39,19 +37,6 @@ import static org.apposed.appose.shm.ShmUtils.withoutLeadingSlash;
  * @author Tobias Pietzsch
  */
 class ShmMacOS implements SharedMemory.Impl {
-
-	/**
-	 * Instance of the CLibrary JNI containing the methods to interact with the Shared memory segments
-	 */
-	// TODO: Try inlining
-	private static final CLibrary INSTANCE = CLibrary.INSTANCE;
-
-	/**
-	 * Instance of the  JNI containing the methods that help ineracting with shared memory segments
-	 * and are not contained in the {@link CLibrary}.
-	 */
-	// TODO: Try inlining
-	private static final MacosHelpers MACOS_INSTANCE = MacosHelpers.INSTANCE;
 
 	/**
 	 * File descriptor
@@ -103,17 +88,17 @@ class ShmMacOS implements SharedMemory.Impl {
 		}
 
 		// Unmap the shared memory
-		if (this.pointer != Pointer.NULL && INSTANCE.munmap(this.pointer, size) == -1) {
+		if (this.pointer != Pointer.NULL && CLibrary.INSTANCE.munmap(this.pointer, size) == -1) {
 			throw new RuntimeException("munmap failed. Errno: " + Native.getLastError());
 		}
 
 		// Close the file descriptor
-		if (INSTANCE.close(this.fd) == -1) {
+		if (CLibrary.INSTANCE.close(this.fd) == -1) {
 			throw new RuntimeException("close failed. Errno: " + Native.getLastError());
 		}
 
 		// Unlink the shared memory object
-		INSTANCE.shm_unlink(this.name);
+		CLibrary.INSTANCE.shm_unlink(this.name);
 		unlinked = true;
 	}
 
@@ -138,16 +123,16 @@ class ShmMacOS implements SharedMemory.Impl {
 				+ "Size of existing shared memory segment: " + prevSize + ", size of proposed object: " + size);
 		}
 		//		shmFd = INSTANCE.shm_open(this.memoryName, O_RDWR, 0666);
-		final int shmFd = MACOS_INSTANCE.create_shared_memory(shm_name, size);
+		final int shmFd = MacosHelpers.INSTANCE.create_shared_memory(shm_name, size);
 		if (shmFd < 0) {
 			throw new RuntimeException("shm_open failed, errno: " + Native.getLastError());
 		}
 		final int shm_size = (int) getSHMSize(shm_name);
 
-		Pointer pointer = INSTANCE.mmap(Pointer.NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0);
+		Pointer pointer = CLibrary.INSTANCE.mmap(Pointer.NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0);
 		if (pointer == Pointer.NULL) {
-			INSTANCE.close(shmFd);
-			INSTANCE.shm_unlink(shm_name);
+			CLibrary.INSTANCE.close(shmFd);
+			CLibrary.INSTANCE.shm_unlink(shm_name);
 			throw new RuntimeException("mmap failed, errno: " + Native.getLastError());
 		}
 
@@ -174,7 +159,7 @@ class ShmMacOS implements SharedMemory.Impl {
 	 * @return size in bytes, or -1 if the shared memory segment couuld not be opened
 	 */
 	private static long getSHMSize(final String name) {
-		final int shmFd = INSTANCE.shm_open(name, O_RDONLY, 0700);
+		final int shmFd = CLibrary.INSTANCE.shm_open(name, O_RDONLY, 0700);
 		if (shmFd < 0) {
 			return -1;
 		} else {
@@ -195,7 +180,7 @@ class ShmMacOS implements SharedMemory.Impl {
 			throw new RuntimeException("Invalid shmFd. It should be bigger than 0.");
 		}
 
-		final long size = MACOS_INSTANCE.get_shared_memory_size(shmFd);
+		final long size = MacosHelpers.INSTANCE.get_shared_memory_size(shmFd);
 		if (size == -1) {
 			// TODO remove macosInstance.unlink_shared_memory(null);;
 			throw new RuntimeException("Failed to get shared memory segment size. Errno: " + Native.getLastError());
