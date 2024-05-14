@@ -3,7 +3,6 @@ package org.apposed.appose.shm;
 import com.sun.jna.Pointer;
 
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
 
 public final class SharedMemory {
 
@@ -23,8 +22,10 @@ public final class SharedMemory {
             case OSX:
                 impl = new ShmMacOS(name, create, size);
                 break;
-            case WINDOWS:
             case LINUX:
+                impl = new ShmLinux(name, create, size);
+                break;
+            case WINDOWS:
             default:
                 throw new UnsupportedOperationException("not implemented for " + ShmUtils.os);
         }
