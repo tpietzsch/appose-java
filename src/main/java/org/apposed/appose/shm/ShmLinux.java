@@ -42,10 +42,30 @@ import static org.apposed.appose.shm.ShmUtils.withoutLeadingSlash;
  */
 class ShmLinux implements SharedMemory.Impl {
 
+
+	/**
+	 * File descriptor
+	 */
 	private final int fd;
+
+	/**
+	 * Size in bytes
+	 */
 	private final int size;
+
+	/**
+	 * Pointer referencing the shared memory
+	 */
 	private final Pointer pointer;
+
+	/**
+	 * Unique name that identifies the shared memory segment.
+	 */
 	private final String name;
+
+	/**
+	 * Whether the memory block has been closed and unlinked
+	 */
 	private boolean unlinked = false;
 
 	@Override
@@ -155,7 +175,7 @@ class ShmLinux implements SharedMemory.Impl {
 	 *
 	 * @return the size in bytes of the shared memory segment
 	 */
-	private static long getSHMSize(int shmFd) {
+	private static long getSHMSize(final int shmFd) {
 		if (shmFd < 0) {
 			throw new RuntimeException("Invalid shmFd. It should be bigger than 0.");
 		}

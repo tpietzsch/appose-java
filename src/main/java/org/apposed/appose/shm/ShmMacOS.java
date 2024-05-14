@@ -129,7 +129,7 @@ class ShmMacOS implements SharedMemory.Impl {
 		if (shmFd < 0) {
 			throw new RuntimeException("shm_open failed, errno: " + Native.getLastError());
 		}
-		final int shm_size = (int) getSHMSize(shm_name);
+		final int shm_size = (int) getSHMSize(shmFd);
 
 		Pointer pointer = CLibrary.INSTANCE.mmap(Pointer.NULL, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, shmFd, 0);
 		if (pointer == Pointer.NULL) {
@@ -167,7 +167,7 @@ class ShmMacOS implements SharedMemory.Impl {
 	 *
 	 * @return the size in bytes of the shared memory segment
 	 */
-	private static long getSHMSize(int shmFd) {
+	private static long getSHMSize(final int shmFd) {
 		if (shmFd < 0) {
 			throw new RuntimeException("Invalid shmFd. It should be bigger than 0.");
 		}

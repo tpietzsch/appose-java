@@ -84,6 +84,8 @@ class ShmUtils {
      */
     static final String SHM_NAME_PREFIX_POSIX = "/psm_";
 
+    static final String SHM_NAME_PREFIX_WIN = "wnsm_";
+
     /**
      * Creates a random filename for the shared memory object.
      *

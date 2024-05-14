@@ -26,6 +26,8 @@ public final class SharedMemory {
                 impl = new ShmLinux(name, create, size);
                 break;
             case WINDOWS:
+                impl = new ShmWindows(name, create, size);
+                break;
             default:
                 throw new UnsupportedOperationException("not implemented for " + ShmUtils.os);
         }
