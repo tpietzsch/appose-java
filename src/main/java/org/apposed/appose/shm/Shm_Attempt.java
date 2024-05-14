@@ -44,10 +44,10 @@ public class Shm_Attempt {
 
 	private static final boolean prepend_leading_slash = os.isPosix();
 
-	private int O_RDONLY = 0;
-	private static final int O_RDWR = 2;
-	private static final int O_CREAT = 512;
-	private static final int O_EXCL = 2048;
+	private static final int O_RDONLY = 0x00000000;
+	private static final int O_RDWR   = 0x00000002;
+	private static final int O_CREAT  = 0x00000200;
+	private static final int O_EXCL   = 0x00000800;
 	private static final int O_CREX = O_CREAT | O_EXCL;
 
 
@@ -55,12 +55,12 @@ public class Shm_Attempt {
 	 * Constant to specify that the shared memory regions mapped can be read but
 	 * not written
 	 */
-	private static final int PROT_READ = 0x1;
+	private static final int PROT_READ = 0x01;
 
 	/**
 	 * Constant to specify that the shared memory regions mapped can be written
 	 */
-	private static final int PROT_WRITE = 0x2;
+	private static final int PROT_WRITE = 0x02;
 
 	/**
 	 * Constant to specify that the shared memory regions mapped can be shared
@@ -136,21 +136,18 @@ public class Shm_Attempt {
 			throw new IllegalArgumentException("'name' can only be null if create=true");
 		}
 
-		final int flags = create ? O_CREX | O_RDWR : O_RDWR;
-		final int mode = 0600;
+		final int flags = O_CREAT | O_RDWR;
+		final int mode = 0666;
 
 		if ( os == OSX ) {
-			final LibC instance = LibC.INSTANCE;
-			if (name == null) {
+            if (name == null) {
 				while (true) {
 					name = make_filename();
-                    fd = instance.shm_open(
-							name,
-							flags,
-							mode
-					);
+//					fd = MacosHelpers.INSTANCE.create_shared_memory(name, (int) size);
+					fd = LibC.INSTANCE.shm_open(name, flags, mode);
 					if (fd == -1) {
 						final int errno = Native.getLastError();
+						System.out.println("errno = " + errno);
 						if (errno != ErrNo.EEXIST) {
 							throw new RuntimeException("failed to create SharedMemory. errno=" + errno);
 						}
@@ -163,7 +160,7 @@ public class Shm_Attempt {
 				if (prepend_leading_slash) {
 					name = "/" + name;
 				}
-                fd = instance.shm_open(
+				fd = LibC.INSTANCE.shm_open(
 						name,
 						flags,
 						mode
@@ -176,15 +173,12 @@ public class Shm_Attempt {
 				}
 			}
 
-//			long size_before = sizeFromFileDescriptor(fd);
-//			System.out.println("size before = " + size_before);
 			if (create) {
-                instance.ftruncate(fd, (int) size);
+				LibC.INSTANCE.ftruncate(fd, (int) size);
 			}
 			size = sizeFromFileDescriptor(fd);
-//			System.out.println("size = " + size);
 			this.size = (int) size;
-			mmap = instance.mmap(Pointer.NULL, (int) size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+			mmap = LibC.INSTANCE.mmap(Pointer.NULL, (int) size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 			// TODO failures in ftruncate, fstat, and mmap should be caught, then unlink and throw some exception
 
 

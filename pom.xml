@@ -77,6 +77,8 @@
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>Appose developers.</license.copyrightOwners>
 
+		<jna.version>5.14.0</jna.version>
+
 		<ivy.version>2.5.1</ivy.version>
 	</properties>
 

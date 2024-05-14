@@ -202,4 +202,15 @@ class ShmMacOS implements SharedMemory.Impl {
 		}
 		return size;
 	}
+
+	@Override
+	public String toString() {
+		return "ShmMacOS{" +
+				"fd=" + fd +
+				", size=" + size +
+				", pointer=" + pointer +
+				", name='" + name + '\'' +
+				", unlinked=" + unlinked +
+				'}';
+	}
 }

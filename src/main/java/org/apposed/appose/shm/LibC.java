@@ -8,7 +8,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
 public interface LibC extends Library {
-	LibC INSTANCE = Native.load((Platform.isMac() ? "System" : "c"), LibC.class);
+	LibC INSTANCE = Native.load("c", LibC.class);
 
 	int shm_open(String name, int flags, int mode);
 	int shm_unlink(String name);

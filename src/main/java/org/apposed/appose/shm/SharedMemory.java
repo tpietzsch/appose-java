@@ -76,15 +76,14 @@ public final class SharedMemory {
      * to the shared memory block.
      */
     public void unlink() {
+        // TODO
         throw new UnsupportedOperationException();
 //		impl.unlink();
     }
 
     @Override
     public String toString() {
-        return "ShmInterface{" +
-                "impl =" + impl +
-                '}';
+        return "SharedMemory{impl=" + impl + '}';
     }
 
     interface Impl {
